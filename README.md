@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Dependency Monitoring Dashboard
 
-## Getting Started
+A centralized Internal Developer Portal (IDP) control plane designed to monitor infrastructure dependencies and aggregate actionable updates across multiple GitOps repositories. 
 
-First, run the development server:
+This dashboard acts as a "Single Pane of Glass," separating routine dependency tracking from active human code reviews by surfacing background bot activity into a dedicated, high-visibility UI.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+* **Dual-Layer Visibility:** Toggle seamlessly between **Actionable Updates** (Draft PRs awaiting human review) and **All Packages** (a complete inventory of current vs. target package versions).
+* **Cross-Ecosystem Parsing:** Custom extraction engine capable of normalizing dependency data across NPM (`package.json`), Go (`go.mod`), and Flutter (`pubspec.yaml`) environments.
+* **Smart UI & Metrics:** Automatically extracts and displays Mend Renovate metrics (Age, Confidence), flags batched ecosystem updates (e.g., React + React DOM), and features a rich Markdown Slide-Over panel for reading release notes.
+* **Zero-Trust Ready:** Authenticates exclusively via scoped GitHub App Installation tokens, ensuring secure, short-lived API access without relying on static Personal Access Tokens (PATs).
 
-## Learn More
+## 🏗️ Architecture & Workflow
 
-To learn more about Next.js, take a look at the following resources:
+This dashboard acts strictly as a **Visibility Layer**. It does not write to GitHub; it reads the operational state left by Mend Renovate.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. **The Webhook Trigger:** A global `renovate-config` preset dictates dependency rules.
+2. **The Silent Execution:** Renovate evaluates repositories and opens silent **Draft Pull Requests** for updates, keeping the main GitHub PR tab clean of bot noise.
+3. **The Aggregation:** This Next.js backend makes parallel requests to the GitHub API, pulling issue bodies and Pull Request states across the infrastructure.
+4. **The Resolution:** Developers review the rich UI, click "Review & Merge on GitHub", and trigger the CI/CD pipeline. Once merged or closed, the dashboard automatically syncs state.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## ⚙️ Prerequisites
 
-## Deploy on Vercel
+### 1. GitHub App Authentication
+To run this dashboard, you must create a GitHub App with the following permissions:
+* **Repository Permissions:** `Issues` (Read), `Pull Requests` (Read), `Metadata` (Read)
+* Install the App on the target repositories you wish to monitor.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 2. Mend Renovate Configuration
+Your target repositories must use Mend Renovate with a specific `renovate.json` configuration to ensure background drafts and dashboards are generated:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```json
+{
+  "dependencyDashboard": true,
+  "dependencyDashboardApproval": false,
+  "draftPR": true,
+  "recreateWhen": "auto"
+}
